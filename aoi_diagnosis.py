@@ -517,6 +517,7 @@ class Agent:
     # The env is potentially different than the one the agent trained with
     # The agent will load a model file created during training.
     def play_episode(self, env, net_file):
+	# This is my comment at github
         print("WARNING: The agent should fit the environment. This is not automatically tested!")
         model = self.net
         state_dict = torch.load(net_file)
