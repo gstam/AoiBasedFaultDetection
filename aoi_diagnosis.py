@@ -7,11 +7,11 @@ Original file is located at
     https://colab.research.google.com/drive/1C-AgUTdaZTdxz_VPITC-Wq25iMYW1CBi
 """
 
-google = !if [ -d 'GDrive/' ]; then echo "1" ; else echo "0"; fi
-if (google[0] is '0' ):
-   from google.colab import drive
-   drive.mount('/content/gdrive')
-!if [ -d 'GDrive/' ]; then echo "Connection to Google drive successful" ; else echo "Error to connect to Google drive"; fi
+#google = !if [ -d 'GDrive/' ]; then echo "1" ; else echo "0"; fi
+#if (google[0] is '0' ):
+#   from google.colab import drive
+#   drive.mount('/content/gdrive')
+#!if [ -d 'GDrive/' ]; then echo "Connection to Google drive successful" ; else echo "Error to connect to Google drive"; fi
 
 # -*- coding: utf-8 -*-
 """aoi_diagnosis.ipynb
@@ -482,10 +482,10 @@ class Agent:
         for step_count in range(learning_duration):
             epsilon = max(epsilon_final, epsilon_start - step_count / epsilon_decay_last_stage)
                     
-            if episode_count % 10 == 0:
-                episode_is_done, episode_reward = self.play_step(self.net, 0.0) #
-            else:
-                episode_is_done, episode_reward = self.play_step(self.net, epsilon) #
+            # if episode_count % 10 == 0:
+            #     episode_is_done, episode_reward = self.play_step(self.net, 0.0) #
+            # else:
+            episode_is_done, episode_reward = self.play_step(self.net, epsilon)
             
             # Under some improvement condition save the parameters of the netwrok.
             if episode_is_done: #step_count % 1000 == 0:
@@ -717,14 +717,14 @@ if __name__ == "__main__":
     training_sessions = 1
     run_dqn_experiment = True #False
     run_a3c_experiment = False #True
-    episode_number = 500
+    episode_number = 1000
     episode_duration = 5000
     descriptive_name = 'nn_32_128'
-    folder_name = '/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
+    folder_name = './' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
     # Logging
     PLOT_RESULTS = False #True
     LIVE_PLOTTING = False #True
-    SAVE_MODEL = False
+    SAVE_MODEL = True
     SAVE_RESULTS_TO_FILE = True
 
     # Actions
