@@ -715,8 +715,8 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
 
 if __name__ == "__main__":
     training_sessions = 1
-    run_dqn_experiment = True #False
-    run_a3c_experiment = False #True
+    run_dqn_experiment = False #False
+    run_a3c_experiment = True #True
     episode_number = 1000
     episode_duration = 5000
     descriptive_name = 'nn_32_128'
