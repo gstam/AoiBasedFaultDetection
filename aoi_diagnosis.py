@@ -161,6 +161,7 @@ class System:
         self.true_health_status = np.zeros(self.episode_duration)
         self.agent_actions = np.zeros(self.episode_duration)
         self.environment_rewards = np.zeros(self.episode_duration)
+        self.total_reward = 0.0
         self.packet_delivery = np.zeros(self.sensor_number)
         self.packet_generation_time = np.zeros(self.sensor_number)
         self.generation_time_of_last_status_update_delivered = np.zeros(self.sensor_number)
@@ -169,15 +170,15 @@ class System:
         self.plot_id = 0
     
     def sample_action(self):
-        #action = np.random.default_rng().integers(self.number_of_actions)
-        r = np.random.default_rng().uniform(0.0, 1.0, 1)
-        action = 0
-        if r < 0.8:
-            action = 0
-        elif r < 0.9:
-            action = 1
-        else:
-            action = 2
+        action = np.random.default_rng().integers(self.number_of_actions)
+#         r = np.random.default_rng().uniform(0.0, 1.0, 1)
+#         action = 0
+#         if r < 0.8:
+#             action = 0
+#         elif r < 0.9:
+#             action = 1
+#         else:
+#             action = 2
         return action
 
     def determine_system_state(self):
@@ -259,6 +260,8 @@ class System:
             else: 
                 reward = 1/np.mean(self.aoi)
             info = None
+            
+            self.total_reward += reward 
         
             # print(f"h: {self.true_health_status[self.time-1] } p_o: {previous_observation} a: {action}, o: {self.observation},r: {reward}")
         else:
@@ -277,7 +280,8 @@ class System:
 
     def _save_results_to_file(self):
         results_file_handle = open(self.results_file_name, 'a+')
-        np.savetxt(results_file_handle, np.hstack((self.true_health_status.reshape(self.episode_duration,1), self.agent_actions.reshape(self.episode_duration,1), self.environment_rewards.reshape(self.episode_duration,1))), fmt='%d %d %f', delimiter=',')
+        # np.savetxt(results_file_handle, np.hstack((self.true_health_status.reshape(self.episode_duration,1), self.agent_actions.reshape(self.episode_duration,1), self.environment_rewards.reshape(self.episode_duration,1))), fmt='%d %d %f', delimiter=',')
+        results_file_handle.write(f'{self.total_reward}\n')
         results_file_handle.close()
 
     def _plot_episode(self):
@@ -300,7 +304,7 @@ class System:
         # print("Reseting the environment!")
         self.time = 0
         self.is_done = False
-        self.reward = 0.0
+        self.total_reward = 0.0
         self.generation_time_of_last_status_update_delivered = np.zeros(self.sensor_number)
 
         #self.true_health_status = np.zeros(self.episode_duration)
@@ -715,13 +719,13 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
        
 
 if __name__ == "__main__":
-    training_sessions = 1
-    run_dqn_experiment = False #False
-    run_a3c_experiment = True #True
-    episode_number = 1000
+    training_sessions = 2
+    run_dqn_experiment = True#False
+    run_a3c_experiment = True#True
+    episode_number = 2 
     episode_duration = 5000
-    descriptive_name = 'nn_32_128'
-    folder_name = './' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
+    descriptive_name = 'g1'
+    path_name = './Test/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
     # Logging
     PLOT_RESULTS = False #True
     LIVE_PLOTTING = False #True
@@ -754,7 +758,7 @@ if __name__ == "__main__":
     control_step_duration = 1
     epsilon_decay_last_stage = 400000
     epsilon_start = 1.0
-    epsilon_final = 0.001
+    epsilon_final = 0.1
 
     # Neural network parameters.
     # number_of_past_observations = 5
@@ -801,14 +805,16 @@ if __name__ == "__main__":
     sensor_number = observation_size    
     action_number = 3
     
-    
     if run_dqn_experiment:
     	for t in range(training_sessions):
-            file_name = f'dqn_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}.txt'
-            net_file = f'dqn_model_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}.pth'
-            results_path = f'{folder_name}{file_name}'
-            model_path = f'{folder_name}{net_file}'
-            env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name)
+            folder_name = f'dqn_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
+            if not os.path.exists(f'{path_name}{folder_name}'):
+                os.makedirs(f'{path_name}{folder_name}')
+            file_name = 'episodes_total_rewards.txt' 
+            net_file = 'dqn_trained_model.pth'
+            results_path = f'{path_name}{folder_name}{file_name}'
+            model_path = f'{path_name}{folder_name}{net_file}'
+            env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path)
             agent = Agent(env, observation_size, hidden_size, action_number) #, number_of_past_observations, number_of_past_actions
             trained_net = agent.train(epsilon_start, epsilon_final, epsilon_decay_last_stage, learning_duration, replay_start_size, batch_size, sync_target_network, model_path, path)
 
@@ -817,10 +823,13 @@ if __name__ == "__main__":
 	        #files.download(file_name) 
     if run_a3c_experiment:
         for t in range(training_sessions):
-            file_name = f'a3c_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}.txt'
-            model_file_name = f'a3c_model_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}.pth'
-            results_path = f'{folder_name}{file_name}'
-            model_path = f'{folder_name}{model_file_name}'
+            folder_name = f'a3c_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
+            if not os.path.exists(f'{path_name}{folder_name}'):
+                os.makedirs(f'{path_name}{folder_name}')
+            file_name = 'episodes_total_rewards.txt'
+            model_file_name = f'a3c_trained_model.pth'
+            results_path = f'{path_name}{folder_name}{file_name}'
+            model_path = f'{path_name}{folder_name}{model_file_name}'
             if path.exists(model_path):
                 print("Loading existing model")
                 MasterNode = torch.load(model_path)
