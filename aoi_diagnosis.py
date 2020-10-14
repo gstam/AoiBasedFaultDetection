@@ -719,12 +719,12 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
        
 
 if __name__ == "__main__":
-    training_sessions = 2 
-    training_sessions_start = 5
+    training_sessions = 10 
+    training_sessions_start = 1
     training_sessions_stop = training_sessions_start + training_sessions
-    run_dqn_experiment = True#False
-    run_a3c_experiment = True#True
-    episode_number = 2 
+    run_dqn_experiment = True 
+    run_a3c_experiment = False #True
+    episode_number = 250 
     episode_duration = 5000
     descriptive_name = 'basis'
     path_name = './Permanent_faults/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
