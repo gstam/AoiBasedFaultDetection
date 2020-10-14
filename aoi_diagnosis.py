@@ -719,13 +719,15 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
        
 
 if __name__ == "__main__":
-    training_sessions = 2
+    training_sessions = 2 
+    training_sessions_start = 5
+    training_sessions_stop = training_sessions_start + training_sessions
     run_dqn_experiment = True#False
     run_a3c_experiment = True#True
     episode_number = 2 
     episode_duration = 5000
-    descriptive_name = 'g1'
-    path_name = './Test/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
+    descriptive_name = 'basis'
+    path_name = './Permanent_faults/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
     # Logging
     PLOT_RESULTS = False #True
     LIVE_PLOTTING = False #True
@@ -806,8 +808,9 @@ if __name__ == "__main__":
     action_number = 3
     
     if run_dqn_experiment:
-    	for t in range(training_sessions):
-            folder_name = f'dqn_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
+    	for t in range(training_sessions_start, training_sessions_stop):
+            folder_name = f'dqn_{descriptive_name}_exp_{t}/'
+            #f'dqn_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
             if not os.path.exists(f'{path_name}{folder_name}'):
                 os.makedirs(f'{path_name}{folder_name}')
             file_name = 'episodes_total_rewards.txt' 
@@ -822,8 +825,9 @@ if __name__ == "__main__":
 	        # agent.print_policy(env, net_file)
 	        #files.download(file_name) 
     if run_a3c_experiment:
-        for t in range(training_sessions):
-            folder_name = f'a3c_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
+        for t in range(training_sessions_start, training_sessions_stop):
+            folder_name = f'a3c_{descriptive_name}_exp_{t}/'
+            #f'a3c_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
             if not os.path.exists(f'{path_name}{folder_name}'):
                 os.makedirs(f'{path_name}{folder_name}')
             file_name = 'episodes_total_rewards.txt'
