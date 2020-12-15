@@ -155,6 +155,7 @@ class System:
             self.sensor.append(Sensor(HEALTHY_SENSOR, sensor_health_status_transition_matrix, p_status_update_generation))
             self.sensor.append(Sensor(HEALTHY_SENSOR, sensor_health_status_transition_matrix, p_status_update_generation))
         self.results_file_name = results_file_name
+        self.trajectory_file = './Trajectory_data/trajectory_file.txt'
         self.network = Network(HEALTHY_NETWORK, network_health_status_transition_matrix, p_status_update_delivery)
         self.episode_duration = episode_duration
         self.time = 0
@@ -280,8 +281,11 @@ class System:
 
     def _save_results_to_file(self):
         results_file_handle = open(self.results_file_name, 'a+')
-        # np.savetxt(results_file_handle, np.hstack((self.true_health_status.reshape(self.episode_duration,1), self.agent_actions.reshape(self.episode_duration,1), self.environment_rewards.reshape(self.episode_duration,1))), fmt='%d %d %f', delimiter=',')
         results_file_handle.write(f'{self.total_reward}\n')
+        results_file_handle.close()
+        # Save a trajectory file that records states, actions and rewards.
+        results_file_handle = open(self.trajectory_file, 'a+')
+        np.savetxt(results_file_handle, np.hstack((self.true_health_status.reshape(self.episode_duration,1), self.agent_actions.reshape(self.episode_duration,1), self.environment_rewards.reshape(self.episode_duration,1))), fmt='%d %d %f', delimiter=',')
         results_file_handle.close()
 
     def _plot_episode(self):
@@ -719,15 +723,15 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
        
 
 if __name__ == "__main__":
-    training_sessions = 10 
+    training_sessions = 1 
     training_sessions_start = 1
     training_sessions_stop = training_sessions_start + training_sessions
     run_dqn_experiment = True 
-    run_a3c_experiment = False #True
-    episode_number = 250 
+    run_a3c_experiment = False 
+    episode_number = 500 
     episode_duration = 5000
-    descriptive_name = 'basis'
-    path_name = './Permanent_faults/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
+    descriptive_name = 'register_full_trajectory'
+    path_name = './full_trajectory/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
     # Logging
     PLOT_RESULTS = False #True
     LIVE_PLOTTING = False #True
@@ -772,7 +776,7 @@ if __name__ == "__main__":
 
     # Simulation parameters
     # sensor probability to make a transition from healthy to healthy state
-    s_Phh = 0.999
+    s_Phh = 0.99
     # sensor probability to make a transition from faulty to faulty state
     s_Pff = 1.0
     # sensor probability to generate a status update when healthy
@@ -780,9 +784,9 @@ if __name__ == "__main__":
     # sensor probability to generate a status update when faulty
     s_Pfsug = 0.0 
     # network transition probability from healthy to healthy state
-    n_Phh = 0.999
+    n_Phh = 0.99
     # network transition probability from faulty to faulty state
-    n_Pff = 1.0
+    n_Pff = 1.0 
     # network status update delivery probability when in healthy state
     n_Phsud = 0.99
     # network status update delivery when in faulty stae
