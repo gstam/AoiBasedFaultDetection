@@ -8,7 +8,7 @@ Original file is located at
 """
 
 import numpy as np
-#import pandas as pd
+import pandas as pd
 import matplotlib.pyplot as plt
 import os.path
 from os import path
@@ -17,99 +17,114 @@ from os import path
 #df_dqn = pd.read_csv("dqn_ed_5000_sn_2_mc_-100.0_s_Phh_0.999_s_Pff_1.0_s_Phsug_1.0_s_Pfsug_0.999_n_Phh_0.99_n_Phsud_0.0(2).txt", delim_whitespace=True, header=None)
 
 def get_moving_average(np_input_array, window_size = 10):
-	moving_average = np.zeros(len(np_input_array) - window_size)
-	moving_average[0] = (np.sum(np_input_array[0:window_size])/window_size)
-	j = 0
-	for i in range(window_size, len(np_input_array)-1, 1):
-		moving_average[j+1] = moving_average[j] + (np_input_array[i] - np_input_array[i-window_size])/window_size
-		j += 1
-	return moving_average
+    moving_average = np.zeros(len(np_input_array) - window_size)
+    moving_average[0] = (np.sum(np_input_array[0:window_size])/window_size)
+    j = 0
+    for i in range(window_size, len(np_input_array)-1, 1):
+        moving_average[j+1] = moving_average[j] + (np_input_array[i] - np_input_array[i-window_size])/window_size
+        j += 1
+    return moving_average
 
 
 def get_episodes_total_reward(data_file, episode_duration, number_of_episodes):
-	np_episode_total_reward = np.zeros(number_of_episodes)
-	episode_reward = np.zeros(episode_duration)
+    np_episode_total_reward = np.zeros(number_of_episodes)
+    episode_reward = np.zeros(episode_duration)
 
-	data = np.loadtxt(data_file)
+    data = np.loadtxt(data_file)
 
-	for i in range(number_of_episodes):
-		begin = i*episode_duration
-		end = begin + episode_duration
-	#    lst_mean_rewards_a2c.append(df_a2c[begin:end][2].sum())
-		episode_reward = data[begin:end, 2]
-	    # print(episode_reward)
-		np_episode_total_reward[i] = (np.sum(episode_reward))
-		# print(np_episode_total_reward[i])
+    for i in range(number_of_episodes):
+        begin = i*episode_duration
+        end = begin + episode_duration
+    #    lst_mean_rewards_a2c.append(df_a2c[begin:end][2].sum())
+        episode_reward = data[begin:end, 2]
+        # print(episode_reward)
+        np_episode_total_reward[i] = (np.sum(episode_reward))
+        # print(np_episode_total_reward[i])
 
-	return np_episode_total_reward
+    return np_episode_total_reward
 
 def get_episode_states_and_actions(data_file, episode_duration, number_of_episodes, requested_episode):
-	episode_states = np.zeros(episode_duration)
-	episode_actions = np.zeros(episode_duration)
-	episode_rewards = np.zeros(episode_duration)
+    episode_states = np.zeros(episode_duration)
+    episode_actions = np.zeros(episode_duration)
+    episode_rewards = np.zeros(episode_duration)
 
-	data = np.loadtxt(data_file)
-	begin = requested_episode*episode_duration
-	end = begin + episode_duration
+    data = np.loadtxt(data_file)
+    begin = requested_episode*episode_duration
+    end = begin + episode_duration
 
-	episode_states = data[begin:end, 0]
-	episode_actions = data[begin:end, 1]
-	episode_rewards = data[begin:end, 2]
+    episode_states = data[begin:end, 0]
+    episode_actions = data[begin:end, 1]
+    episode_rewards = data[begin:end, 2]
 
-	return episode_states, episode_actions, episode_rewards
+    return episode_states, episode_actions, episode_rewards
+
+def trajectory_plot():
+    number_of_episodes = 250
+    requested_episode = 50
+    episode_duration = 5000
+    data_file = '/home/gstam/Projects/AoiBasedFaultDetection/Trajectory_data/trajectories_of_250_episodes.txt'
+    episode_states, episode_actions, episode_rewards = get_episode_states_and_actions(data_file, episode_duration, number_of_episodes, requested_episode)
+    print(np.sum(episode_rewards))
+    x = np.arange(episode_duration)
+    fig = plt.figure()
+    plt.plot(x, episode_actions)
+    plt.plot(x, episode_states) 
+    plt.xlabel('Time slot') 
+    plt.ylabel("State") #plt.title(')
+    #plt.legend()
+    plt.savefig('episode_trajectory.pdf')
+
 
 
 def main():
-        dqn_data_file = 'dqn_attempt_2_sess_0_ed_5000_sn_4_mc_100.0_s_Phh_0.999_s_Pff_1.0_s_Phsug_1.0_s_Pfsug_0.999_n_Phh_0.99_n_Phsud_0.0.txt'
-        a2c_data_file = 'a3c_nn_32_128_sess_0_ed_5000_sn_4_mc_100.0_s_Phh_0.999_s_Pff_1.0_s_Phsug_1.0_s_Pfsug_0.999_n_Phh_0.99_n_Phsud_0.0.txt'
-        episode_duration = 5000
-        number_of_episodes = 400 #1000
-        
-        if path.exists('dqn_total_reward_per_episode.txt'):
-            dqn_total_reward_per_episode = np.loadtxt('dqn_total_reward_per_episode.txt')
-        else:
-            dqn_total_reward_per_episode = get_episodes_total_reward(dqn_data_file, episode_duration, number_of_episodes)
-            np.savetxt('dqn_total_reward_per_episode.txt', dqn_total_reward_per_episode, delimiter=',')
-            
-        if path.exists('a2c_total_reward_per_episode.txt'):
-            a2c_total_reward_per_episode = np.loadtxt('a2c_total_reward_per_episode.txt')	
-        else:
-            a2c_total_reward_per_episode = get_episodes_total_reward(a2c_data_file, episode_duration, number_of_episodes)
-            np.savetxt('a2c_total_reward_per_episode.txt', a2c_total_reward_per_episode, delimiter=',')
-        # x = np.linspace(1, number_of_episodes, number_of_episodes)
-        fig = plt.figure()
-        plt.plot(dqn_total_reward_per_episode, label='DQN')
-        plt.plot(a2c_total_reward_per_episode, label='A2C') 
-        plt.xlabel('Episode') 
-        plt.ylabel("Episode's Total reward") #plt.title(')
-        plt.legend()
-        plt.savefig('Total_reward_vs_episode.pdf')
-	# plt.show() 
+    episode_number = 250
+    training_sessions = 10
+    data_frame = np.zeros((training_sessions, episode_number))
 
-        fig = plt.figure()
-        window_size = 10
-        dqn_moving_average = get_moving_average(dqn_total_reward_per_episode, window_size)
-        a2c_moving_average = get_moving_average(a2c_total_reward_per_episode, window_size)
-        x = np.arange(window_size, len(a2c_total_reward_per_episode), 1)
-        plt.plot(x, dqn_moving_average, label='DQN') 
-        plt.plot(x, a2c_moving_average, label='A2C')
-        plt.xlabel('Episode')
-        plt.ylabel("Episode total reward \n moving average")
-        plt.legend()
-        plt.savefig('moving_average.pdf')
-	# data_file = 'ed_5000_sn_4_mc_-100.0_s_Phh_0.999_s_Pff_1.0_s_Phsug_1.0_s_Pfsug_0.999_n_Phh_0.99_n_Phsud_0.0.txt'
-	# for e in range(150, 170, 2):
-	# 	requested_episode = e
-	# 	data_file_list = [dqn_data_file, a2c_data_file ]
-	# 	for data_file in data_file_list:
-	# 		episode_states, episode_actions, episode_rewards = get_episode_states_and_actions(data_file, episode_duration, number_of_episodes, requested_episode)
-	# 		fig, (ax1, ax2, ax3) = plt.subplots(3,1)
-	# 		print(str(data_file))
-	# 		ax1.plot(episode_states)
-	# 		ax2.plot(episode_actions)
-	# 		ax3.plot(episode_rewards)
-	# 		plt.show()
+    base ='/home/gstam/Projects/AoiBasedFaultDetection/Permanent_faults/'
+    rl_algorithm = ['a3c_basis_exp_', 'dqn_basis_exp_']
+    number_of_drl_algorithms = 2
+    mean_reward = np.zeros((number_of_drl_algorithms, episode_number))
+    std_across_training_sessions = np.zeros((number_of_drl_algorithms, episode_number))
+    
+    alg_index = 0
+    for alg in rl_algorithm:
+        for i in range(1, training_sessions+1):
+            experiment_folder = f'{alg}{i}'
+            data_file = f'{base}{experiment_folder}/episodes_total_rewards.txt'
+            # print(data_file)
+            data = np.loadtxt(data_file)
+            # print(data)
+            data_frame[i-1,:] = data
+        
+        mean_reward[alg_index, :] = np.mean(data_frame, 0)
+        std_across_training_sessions[alg_index, :] = np.std(data_frame, 0)
+        alg_index += 1
+
+    # Error
+
+
+    # The x-axis represents the number of the episode.
+    x = np.arange(episode_number)
+    student_distribution_parameter = 2.262
+    y_error = (student_distribution_parameter / np.sqrt(training_sessions))*std_across_training_sessions
+    
+    fig = plt.figure()
+    #plt.plot(dqn_total_reward_per_episode, label='DQN')
+    plt.plot(x, mean_reward[0,:], label='A2C') 
+    plt.fill_between(x, mean_reward[0,:]-y_error[0,:], mean_reward[0,:]+y_error[0,:], alpha=0.2)
+    plt.plot(x, mean_reward[1,:], label='DQN') 
+    plt.fill_between(x, mean_reward[1,:]-y_error[0,:], mean_reward[1,:]+y_error[0,:], alpha=0.2)
+    plt.xlabel('Episode') 
+    plt.ylabel("Average episode reward") #plt.title(')
+    plt.legend()
+    plt.savefig('permanent_faults_average_reward_vs_episode.pdf')
+  
+  #  print(mean_reward)
+  #  print(data_frame[0,:])
+  #  print(data_frame.shape)
 
 if __name__ == '__main__':
-	main()
-
+    # main()
+    trajectory_plot()
+# My name is george!
