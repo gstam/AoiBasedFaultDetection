@@ -147,7 +147,7 @@ class Network:
 
 
 class System:
-    def __init__(self, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_file_name):
+    def __init__(self, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_file_name, trajectory_file_name):
         self.number_of_actions = action_number
         self.sensor_number = sensor_number
         self.sensor = []
@@ -155,7 +155,7 @@ class System:
             self.sensor.append(Sensor(HEALTHY_SENSOR, sensor_health_status_transition_matrix, p_status_update_generation))
             self.sensor.append(Sensor(HEALTHY_SENSOR, sensor_health_status_transition_matrix, p_status_update_generation))
         self.results_file_name = results_file_name
-        self.trajectory_file = './Trajectory_data/trajectory_of_1000_episodes.txt'
+        self.trajectory_file = trajectory_file_name
         self.network = Network(HEALTHY_NETWORK, network_health_status_transition_matrix, p_status_update_delivery)
         self.episode_duration = episode_duration
         self.time = 0
@@ -439,7 +439,12 @@ class Agent:
         done_reward = None
         # Select action with ε-greedy algorithm
         if np.random.random() < epsilon:
-            action = env.sample_action()
+            # A modified epsilon-greedy algorithm that provides the agent with more experience 
+            # for cases where the maintenance action is not taken for long periods of time.
+            if np.random.random() < 0.8:
+                action = NO_MAINTENANCE
+            else:
+                action = env.sample_action()
         else:
             #np_a_state = self.I.information_vector #np.array([self.information_vector])
             # print(f"np_a_state: {np_a_state}")
@@ -732,7 +737,7 @@ if __name__ == "__main__":
     training_sessions_stop = training_sessions_start + training_sessions
     run_dqn_experiment = True 
     run_a3c_experiment = False 
-    episode_number = 1000 
+    episode_number = 200 
     episode_duration = 5000
     descriptive_name = 'register_full_trajectory'
     path_name = './full_trajectory/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
@@ -766,9 +771,9 @@ if __name__ == "__main__":
     
     learning_duration = episode_number*episode_duration
     control_step_duration = 1
-    epsilon_decay_last_stage = 500000
+    epsilon_decay_last_stage = 400000
     epsilon_start = 1.0
-    epsilon_final = 0.01
+    epsilon_final = 0.1
 
     # Neural network parameters.
     # number_of_past_observations = 5
@@ -823,9 +828,12 @@ if __name__ == "__main__":
                 os.makedirs(f'{path_name}{folder_name}')
             file_name = 'episodes_total_rewards.txt' 
             net_file = 'dqn_trained_model.pth'
+            trajectory_file_name = 'modified_epsilon_greedy_trajetory.txt'
+
             results_path = f'{path_name}{folder_name}{file_name}'
             model_path = f'{path_name}{folder_name}{net_file}'
-            env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path)
+            trajectory_path = f'{path_name}{trajectory_file_name}'
+            env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, trajectory_path)
             agent = Agent(env, observation_size, hidden_size, action_number) #, number_of_past_observations, number_of_past_actions
             trained_net = agent.train(epsilon_start, epsilon_final, epsilon_decay_last_stage, learning_duration, replay_start_size, batch_size, sync_target_network, model_path, path)
             # agent.play_episode(env, './dqn_trained_model.pth')
