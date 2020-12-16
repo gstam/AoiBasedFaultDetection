@@ -155,7 +155,7 @@ class System:
             self.sensor.append(Sensor(HEALTHY_SENSOR, sensor_health_status_transition_matrix, p_status_update_generation))
             self.sensor.append(Sensor(HEALTHY_SENSOR, sensor_health_status_transition_matrix, p_status_update_generation))
         self.results_file_name = results_file_name
-        self.trajectory_file = './Trajectory_data/trajectory_file.txt'
+        self.trajectory_file = './Trajectory_data/trajectory_of_1000_episodes.txt'
         self.network = Network(HEALTHY_NETWORK, network_health_status_transition_matrix, p_status_update_delivery)
         self.episode_duration = episode_duration
         self.time = 0
@@ -490,17 +490,17 @@ class Agent:
         for step_count in range(learning_duration):
             epsilon = max(epsilon_final, epsilon_start - step_count / epsilon_decay_last_stage)
                     
-            # if episode_count % 10 == 0:
-            #     episode_is_done, episode_reward = self.play_step(self.net, 0.0) #
-            # else:
-            episode_is_done, episode_reward = self.play_step(self.net, epsilon)
+            if episode_count % 10 == 0:
+                episode_is_done, episode_reward = self.play_step(self.net, 0.0) #
+            else:
+                episode_is_done, episode_reward = self.play_step(self.net, epsilon)
             
             # Under some improvement condition save the parameters of the netwrok.
             if episode_is_done: #step_count % 1000 == 0:
                 episode_rewards_list.append(episode_reward)
                 print(f'Episode: {episode_count} Total reward: {episode_reward}')
       
-                if episode_count % 20 == 0:
+                if episode_count % 10 == 0:
                     torch.save(self.net.state_dict(), net_file)
 
                 episode_count += 1
@@ -528,18 +528,22 @@ class Agent:
 	# This is my comment at github
         print("WARNING: The agent should fit the environment. This is not automatically tested!")
         model = self.net
-        state_dict = torch.load(net_file)
-        model.load_state_dict(state_dict)
+        # state_dict = torch.load(net_file)
+        model.load_state_dict(torch.load(net_file))
         for step_count in range(env.episode_duration):
             episode_is_done, episode_reward = agent.play_step(model, 0.0) #
             if episode_is_done:
                 print(f"Episode Reward: {episode_reward}")
-                fig, ax = plt.subplots(2,1)
-                plot_range = episode_duration
-                x = np.arange(plot_range)
-                ax[0].step(x, self.env.true_health_status[0:plot_range])    
-                ax[1].step(x, self.env.agent_actions[0:plot_range])   
-                plt.show()
+                # fig, ax = plt.subplots(2,1)
+                # plot_range = episode_duration
+                # x = np.arange(plot_range)
+                # ax[0].step(x, self.env.true_health_status[0:plot_range])    
+                # ax[1].step(x, self.env.agent_actions[0:plot_range])   
+                # plt.show()
+                results_file_handle = open('./Trajectory_data/trajectory_file', 'a+')
+                np.savetxt(results_file_handle, np.hstack((self.env.true_health_status.reshape(env.episode_duration,1), self.env.agent_actions.reshape(self.env.episode_duration,1), self.env.environment_rewards.reshape(self.env.episode_duration,1))), fmt='%d %d %f', delimiter=',')
+                results_file_handle.close()
+
 
 
     @torch.no_grad()
@@ -728,7 +732,7 @@ if __name__ == "__main__":
     training_sessions_stop = training_sessions_start + training_sessions
     run_dqn_experiment = True 
     run_a3c_experiment = False 
-    episode_number = 500 
+    episode_number = 1000 
     episode_duration = 5000
     descriptive_name = 'register_full_trajectory'
     path_name = './full_trajectory/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
@@ -762,9 +766,9 @@ if __name__ == "__main__":
     
     learning_duration = episode_number*episode_duration
     control_step_duration = 1
-    epsilon_decay_last_stage = 400000
+    epsilon_decay_last_stage = 500000
     epsilon_start = 1.0
-    epsilon_final = 0.1
+    epsilon_final = 0.01
 
     # Neural network parameters.
     # number_of_past_observations = 5
@@ -776,7 +780,7 @@ if __name__ == "__main__":
 
     # Simulation parameters
     # sensor probability to make a transition from healthy to healthy state
-    s_Phh = 0.99
+    s_Phh = 0.999
     # sensor probability to make a transition from faulty to faulty state
     s_Pff = 1.0
     # sensor probability to generate a status update when healthy
@@ -784,7 +788,7 @@ if __name__ == "__main__":
     # sensor probability to generate a status update when faulty
     s_Pfsug = 0.0 
     # network transition probability from healthy to healthy state
-    n_Phh = 0.99
+    n_Phh = 0.999
     # network transition probability from faulty to faulty state
     n_Pff = 1.0 
     # network status update delivery probability when in healthy state
@@ -824,7 +828,7 @@ if __name__ == "__main__":
             env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path)
             agent = Agent(env, observation_size, hidden_size, action_number) #, number_of_past_observations, number_of_past_actions
             trained_net = agent.train(epsilon_start, epsilon_final, epsilon_decay_last_stage, learning_duration, replay_start_size, batch_size, sync_target_network, model_path, path)
-
+            # agent.play_episode(env, './dqn_trained_model.pth')
 	        #agent.play_episode(env, net_file)
 	        # agent.print_policy(env, net_file)
 	        #files.download(file_name) 
