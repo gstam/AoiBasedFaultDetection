@@ -62,7 +62,7 @@ def trajectory_plot():
     number_of_episodes = 250
     requested_episode = 50
     episode_duration = 5000
-    data_file = '/home/gstam/Projects/AoiBasedFaultDetection/Trajectory_data/trajectories_of_250_episodes.txt'
+    data_file = '/home/gstam/Projects/AoiBasedFaultDetection/trajectory_file.txt'
     episode_states, episode_actions, episode_rewards = get_episode_states_and_actions(data_file, episode_duration, number_of_episodes, requested_episode)
     print(np.sum(episode_rewards))
     x = np.arange(episode_duration)
@@ -77,13 +77,13 @@ def trajectory_plot():
 
 
 def main():
-    episode_number = 250
+    episode_number = 150
     training_sessions = 10
     data_frame = np.zeros((training_sessions, episode_number))
 
-    base ='/home/gstam/Projects/AoiBasedFaultDetection/Permanent_faults/'
-    rl_algorithm = ['a3c_basis_exp_', 'dqn_basis_exp_']
-    number_of_drl_algorithms = 2
+    base ='/home/gstam/Projects/AoiBasedFaultDetection/Data/Intermittent_sensor_and_network_faults/'
+    rl_algorithm = ['a3c_total_episode_reward_exp_', 'dqn_total_episode_reward_exp_', 'dqn_basis_exp_']
+    number_of_drl_algorithms = 3
     mean_reward = np.zeros((number_of_drl_algorithms, episode_number))
     std_across_training_sessions = np.zeros((number_of_drl_algorithms, episode_number))
     
@@ -95,7 +95,7 @@ def main():
             # print(data_file)
             data = np.loadtxt(data_file)
             # print(data)
-            data_frame[i-1,:] = data
+            data_frame[i-1,:] = data[:150]
         
         mean_reward[alg_index, :] = np.mean(data_frame, 0)
         std_across_training_sessions[alg_index, :] = np.std(data_frame, 0)
@@ -111,20 +111,22 @@ def main():
     
     fig = plt.figure()
     #plt.plot(dqn_total_reward_per_episode, label='DQN')
+    plt.plot(x, mean_reward[1,:], label='DQN-modified') 
+    plt.fill_between(x, mean_reward[1,:]-y_error[0,:], mean_reward[1,:]+y_error[0,:], alpha=0.2)
     plt.plot(x, mean_reward[0,:], label='A2C') 
     plt.fill_between(x, mean_reward[0,:]-y_error[0,:], mean_reward[0,:]+y_error[0,:], alpha=0.2)
-    plt.plot(x, mean_reward[1,:], label='DQN') 
-    plt.fill_between(x, mean_reward[1,:]-y_error[0,:], mean_reward[1,:]+y_error[0,:], alpha=0.2)
+    plt.plot(x, mean_reward[2,:], label='DQN') 
+    plt.fill_between(x, mean_reward[2,:]-y_error[0,:], mean_reward[2,:]+y_error[0,:], alpha=0.2)
     plt.xlabel('Episode') 
     plt.ylabel("Average episode reward") #plt.title(')
     plt.legend()
-    plt.savefig('permanent_faults_average_reward_vs_episode.pdf')
+    plt.savefig('Intermittent_sensor_and_network_faults_average_reward_vs_episode.pdf')
   
   #  print(mean_reward)
   #  print(data_frame[0,:])
   #  print(data_frame.shape)
 
 if __name__ == '__main__':
-    # main()
-    trajectory_plot()
+    main()
+    # trajectory_plot()
 # My name is george!

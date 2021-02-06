@@ -441,10 +441,10 @@ class Agent:
         if np.random.random() < epsilon:
             # A modified epsilon-greedy algorithm that provides the agent with more experience 
             # for cases where the maintenance action is not taken for long periods of time.
-            if np.random.random() < 0.8:
-                action = NO_MAINTENANCE
-            else:
-                action = env.sample_action()
+            # if np.random.random() < 0.8:
+            #     action = NO_MAINTENANCE
+            # else:
+            action = env.sample_action()
         else:
             #np_a_state = self.I.information_vector #np.array([self.information_vector])
             # print(f"np_a_state: {np_a_state}")
@@ -495,10 +495,10 @@ class Agent:
         for step_count in range(learning_duration):
             epsilon = max(epsilon_final, epsilon_start - step_count / epsilon_decay_last_stage)
                     
-            if episode_count % 10 == 0:
-                episode_is_done, episode_reward = self.play_step(self.net, 0.0) #
-            else:
-                episode_is_done, episode_reward = self.play_step(self.net, epsilon)
+            # if episode_count % 10 == 0:
+            #     episode_is_done, episode_reward = self.play_step(self.net, 0.0) #
+            # else:
+            episode_is_done, episode_reward = self.play_step(self.net, epsilon)
             
             # Under some improvement condition save the parameters of the netwrok.
             if episode_is_done: #step_count % 1000 == 0:
@@ -633,33 +633,49 @@ class ActorCritic(nn.Module):
 
 
 def update_params(worker_opt, values, logprobs, rewards, G,  cost_to_go_horizon, clc=0.2, gamma=1):
-        sample_length = len(rewards)
-        rewards = torch.Tensor(rewards) #.flip(dims=(0,)).view(-1)
-        logprobs = torch.stack(logprobs) #.flip(dims=(0,)).view(-1) #to Tensor and reverse
-        values = torch.stack(values) #.flip(dims=(0,)).view(-1) #to Tensor and reverse
-        Returns = []
-        #G #torch.Tensor([0])#rewards_[0]
-        #Ret.append(ret_)
-        for h in range(rewards.shape[0]):
-            if h < (rewards.shape[0] - cost_to_go_horizon):
-                value = torch.sum(rewards[h:(h+cost_to_go_horizon)])
-            else:
-                value = torch.sum(rewards[h:])
-            Returns.append(value)
+    sample_length = len(rewards)
+    rewards = torch.Tensor(rewards) #.flip(dims=(0,)).view(-1)
+    logprobs = torch.stack(logprobs) #.flip(dims=(0,)).view(-1) #to Tensor and reverse
+    values = torch.stack(values) #.flip(dims=(0,)).view(-1) #to Tensor and reverse
+    Returns = []
+    #G #torch.Tensor([0])#rewards_[0]
+    #Ret.append(ret_)
+    for h in range(rewards.shape[0]):
+        if h < (rewards.shape[0] - cost_to_go_horizon):
+            value = torch.sum(rewards[h:(h+cost_to_go_horizon)])
+        else:
+            value = torch.sum(rewards[h:])
+        Returns.append(value)
 
-        if len(Returns) != rewards.shape[0]:
-            print(f'Wrong length for Returns')
+    if len(Returns) != rewards.shape[0]:
+        print(f'Wrong length for Returns')
 
-        Returns = torch.stack(Returns).view(-1)
-        Returns = F.normalize(Returns,dim=0)
-        actor_loss = -1*logprobs * (Returns - values.detach())
-        critic_loss = torch.pow(values - Returns,2)
-        loss = actor_loss.sum() + clc*critic_loss.sum()
-        loss.backward()
+    Returns = torch.stack(Returns).view(-1)
+    Returns = F.normalize(Returns,dim=0)
+    actor_loss = -1*logprobs * (Returns - values.detach())
+    critic_loss = torch.pow(values - Returns,2)
+    loss = actor_loss.sum() + clc*critic_loss.sum()
+    loss.backward()
 
-        worker_opt.step()
-        return actor_loss, critic_loss, len(rewards)
-
+    worker_opt.step()
+    return actor_loss, critic_loss, len(rewards)
+    # rewards = torch.Tensor(rewards).flip(dims=(0,)).view(-1)
+    # logprobs = torch.stack(logprobs).flip(dims=(0,)).view(-1) #to Tensor and reverse
+    # values = torch.stack(values).flip(dims=(0,)).view(-1) #to Tensor and reverse
+    # Returns = []
+    # ret_ = G
+    # for r in range(rewards.shape[0]):
+    #     ret_ = rewards[r] + gamma * ret_
+    #     Returns.append(ret_)
+    # Returns = torch.stack(Returns).view(-1)
+    # Returns = F.normalize(Returns,dim=0)
+    # actor_loss = -1*logprobs * (Returns - values.detach())
+    # critic_loss = torch.pow(values - Returns,2)
+    # loss = actor_loss.sum() + clc*critic_loss.sum()
+    # loss.backward()
+    # worker_opt.step()
+    # return actor_loss, critic_loss, len(rewards)
+    
 
 def run_episode(worker_env, worker_model, N_steps):
     state = torch.from_numpy(worker_env.observation).float()
@@ -699,11 +715,11 @@ def run_episode(worker_env, worker_model, N_steps):
     return values, logprobs, rewards, G
 
 
-def worker(t, worker_model, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name, model_path): #q is mp Queue
+def worker(t, worker_model, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name, model_path, trajectory_path): #q is mp Queue
     print("In process {}".format(t,))
     # start_time = time.time()
     #play n steps of the game, store rewards
-    worker_env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name)#gym.make("CartPole-v1")
+    worker_env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name, trajectory_path)#gym.make("CartPole-v1")
     #worker_env.reset()
     worker_opt = optim.Adam(lr=1e-4,params=worker_model.parameters())
     worker_opt.zero_grad()
@@ -732,15 +748,15 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
        
 
 if __name__ == "__main__":
-    training_sessions = 1 
+    training_sessions = 20 
     training_sessions_start = 1
     training_sessions_stop = training_sessions_start + training_sessions
     run_dqn_experiment = True 
     run_a3c_experiment = False 
-    episode_number = 200 
+    episode_number = 150 
     episode_duration = 5000
-    descriptive_name = 'register_full_trajectory'
-    path_name = './full_trajectory/' #'./Data/' #'/content/gdrive/My Drive/Colab Notebooks/aoi_diagnosis_results/' # './' #
+    descriptive_name = 'vanilla_epsilon_greedy'
+    path_name = './Data/Intermittent_sensor_and_network_faults/' 
     # Logging
     PLOT_RESULTS = False #True
     LIVE_PLOTTING = False #True
@@ -771,9 +787,9 @@ if __name__ == "__main__":
     
     learning_duration = episode_number*episode_duration
     control_step_duration = 1
-    epsilon_decay_last_stage = 400000
+    epsilon_decay_last_stage = 500000
     epsilon_start = 1.0
-    epsilon_final = 0.1
+    epsilon_final = 0.01
 
     # Neural network parameters.
     # number_of_past_observations = 5
@@ -787,7 +803,7 @@ if __name__ == "__main__":
     # sensor probability to make a transition from healthy to healthy state
     s_Phh = 0.999
     # sensor probability to make a transition from faulty to faulty state
-    s_Pff = 1.0
+    s_Pff = 0.9
     # sensor probability to generate a status update when healthy
     s_Phsug = 1.0
     # sensor probability to generate a status update when faulty
@@ -795,7 +811,7 @@ if __name__ == "__main__":
     # network transition probability from healthy to healthy state
     n_Phh = 0.999
     # network transition probability from faulty to faulty state
-    n_Pff = 1.0 
+    n_Pff = 0.9 
     # network status update delivery probability when in healthy state
     n_Phsud = 0.99
     # network status update delivery when in faulty stae
@@ -848,8 +864,10 @@ if __name__ == "__main__":
                 os.makedirs(f'{path_name}{folder_name}')
             file_name = 'episodes_total_rewards.txt'
             model_file_name = f'a3c_trained_model.pth'
+            trajectory_file_name = 'modified_epsilon_greedy_trajetory.txt'
             results_path = f'{path_name}{folder_name}{file_name}'
             model_path = f'{path_name}{folder_name}{model_file_name}'
+            trajectory_path = f'{path_name}{trajectory_file_name}'
             if path.exists(model_path):
                 print("Loading existing model")
                 MasterNode = torch.load(model_path)
@@ -867,7 +885,7 @@ if __name__ == "__main__":
             i = 0 
             counter = 0
             losses = 0
-            worker(t, MasterNode, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, model_path)
+            worker(t, MasterNode, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, model_path, trajectory_path)
             # counter = mp.Value('i',0)
             # losses = mp.Queue()
             # for i in range(params['n_workers']):
