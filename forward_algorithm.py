@@ -110,12 +110,19 @@ def compute_omega(Gamma, B, O):
 
 def baum_welch(A, B, O, c):
     Alpha = forward_algorithm(A, B, O, c)
+    print(f'Alpha: {Alpha}')
     Beta = backward_algorithm(A, B, O)
+    print(f'Beta: {Beta}')
     Gamma = compute_gamma(Alpha, Beta)
+    print(f'Gamma: {Gamma}')
     tau = compute_tau(Alpha, Beta, A, B, O)
+    print(f'tau: {tau}')
     taui = compute_taui(Gamma, B, O)
+    print(f'taui: {taui}')
     nu = compute_nu(Gamma, B)
+    print(f'nu: {nu}')
     Omega = compute_omega(Gamma, B, O)
+    print(f'nu: {Omega}')
     c = Gamma[1, :]
     A = np.divide(tau, taui)
     B = np.divide(Omega, nu)
@@ -184,12 +191,12 @@ def generate_observation(B,s):
 
 if __name__ == '__main__':
     A = np.array([[0.9,  0.1],
-                  [0.01, 0.99]])
-    B = np.array([[0.99,  0.01],
-                  [0.01, 0.99]])
+                  [0.1, 0.9]])
+    B = np.array([[0.9,  0.1],
+                  [0.1, 0.9]])
     c = np.array([0.9, 0.1])
     # print(f'Sum: {np.sum(A, axis=0)}')
-    N = 20
+    N = 100
     S, O = hidden_gilbert_elliot_generator(A, B, c, N)
     print(S)
     print(O)
@@ -198,7 +205,7 @@ if __name__ == '__main__':
                   [0.1, 0.9]])
     B_hat = np.array([[0.9,  0.1],
                   [0.1, 0.9]])
-    c_hat = np.array([0.2, 0.3])
+    c_hat = np.array([0.9, 0.1])
 
     for g in range(1):
         S, O = hidden_gilbert_elliot_generator(A, B, c, N)
