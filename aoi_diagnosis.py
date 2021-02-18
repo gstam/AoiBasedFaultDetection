@@ -67,14 +67,12 @@ class Sensor:
     def get_health_status(self):
         return self.health_status
 
-
     def get_queue_of_status_updates(self):
         return self.queue_of_status_updates
 
     def apply_action(self, action):
         if self.health_status == FAULTY_SENSOR and action == REPAIR_SENSOR:
             self.health_status = HEALTHY_SENSOR
-            
 
     def perform_sensor_state_transition(self):
         sample_number_for_sensor_health = np.random.default_rng().uniform(0.0, 1.0, 1)
@@ -92,7 +90,6 @@ class Sensor:
             else:
                 self.health_status = HEALTHY_SENSOR
 
-
     def generate_status_update(self, current_time):
         sample_number_for_status_update_generation = np.random.default_rng().uniform(0.0, 1.0, 1)
         # print(f"Status update generator value: {sample_number_for_status_update_generation} while health status: {self.p_status_update_generation[self.health_status]}")
@@ -101,7 +98,6 @@ class Sensor:
             self.queue_of_status_updates.append(current_time)
           else:
             self.queue_of_status_updates[0] = (current_time)
-
 
     def deliver_status_update(self, network):
         packet_delivery = False
@@ -147,6 +143,7 @@ class Network:
 
 
 class System:
+    
     def __init__(self, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_file_name, trajectory_file_name):
         self.number_of_actions = action_number
         self.sensor_number = sensor_number
@@ -206,7 +203,14 @@ class System:
         # elif self.sensor[1].get_health_status() == 1 and self.sensor[0].get_health_status() == 1 and self.network.get_health_status() == 1:
         #     assert(health_status == 7)
         return health_status
-  
+    
+    def get_hidden_state(self):
+        hidden_state = []
+        for i in range(self.sensor_number):
+            hidden_state.append(self.sensor[i].get_health_status())
+        hidden_state.append(self.network.get_health_status())
+
+        return hidden_state
 
     def step(self, action):
         #import pdb; pdb.set_trace()
@@ -219,7 +223,7 @@ class System:
         self.agent_actions[self.time-1] = action
         
         if self.time < self.episode_duration:
-            # Determine the true health status of the system as an integer ranging from 0 to 7.
+            # Determine the true health status of the system as an integer
             self.true_health_status[self.time-1] = self.determine_system_state()
 
             # Repair sensors
@@ -260,7 +264,7 @@ class System:
                 reward = 1/(maintenance_cost + np.mean(self.aoi))
             else: 
                 reward = 1/np.mean(self.aoi)
-            info = None
+            info = self.get_hidden_state()
             
             self.total_reward += reward 
         
@@ -269,7 +273,7 @@ class System:
             self.observation.fill(0.0)
             reward = 0.0
             is_done = True
-            info = None
+            info = self.get_hidden_state()
             if PLOT_RESULTS == True:
                 self._plot_episode()
             if SAVE_RESULTS_TO_FILE:
@@ -301,8 +305,6 @@ class System:
             plt.close(fig)
         else:
             plt.show()
-            
-
 
     def reset(self):
         # print("Reseting the environment!")
@@ -333,78 +335,6 @@ class DQN(nn.Module):
     def forward(self, x):
         #print(f"neural network input: {x}")    
         return self.net(x)
-
-
-class ExperienceBuffer:
-    def __init__(self, capacity):
-        self.buffer = collections.deque(maxlen=capacity)
-
-    def print_experience_buffer(self, indices):
-        print(f"The length of the buffer is: {len(self.buffer)}")
-        for idx in indices:
-           print(f"Buffer: {self.buffer[idx]}")
-
-    def __len__(self):
-        return len(self.buffer)
-
-    def append(self, experience):
-        #print(f"ExperienceBuffer before appending: {experience}")
-        self.buffer.append(experience)
-        #self.print_experience_buffer()
-
-    def pop(self):
-        return self.buffer.pop()
-
-    def sample(self, batch_size):
-        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
-        # print(f"Buffer: {self.buffer[indices[0]]}")
-        states, actions, rewards, dones, next_states = zip(*[self.buffer[idx] for idx in indices])
-        # print(f"States: {states[0]}, Actions: {actions[0]}, Dones: {dones[0]}, Next States: {next_states[0]}")
-        # self.print_experience_buffer(indices)
-        return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), np.array(dones, dtype=np.uint8), np.array(next_states)
-
-    
-        # for exp in len(self.buffer):
-        #    #print(f"Buffer: {exp}")
-        #    print(self.buffer.pop())
-
-
-class InformationVector:
-    def __init__(self, number_of_past_observations, number_of_past_actions):
-        self.number_of_past_observations = number_of_past_observations
-        self.number_of_past_actions = number_of_past_actions
-        self.past_observations = np.zeros(number_of_past_observations)
-        self.past_actions = np.zeros(number_of_past_actions)
-        self.information_vector = np.zeros(number_of_past_observations + number_of_past_actions)
-
-    def reset(self):
-        self.information_vector = np.zeros(self.number_of_past_observations + self.number_of_past_actions)
-
-    def _append_observation(self, observation):
-        assert isinstance(observation, float), "Observation is not float" 
-        # Roll matrix values one step to the left
-        self.past_observations = np.roll(self.past_observations, 1)
-        # Assign at the last position of the matrix the new observation
-        self.past_observations[0] = observation
-        return self.past_observations
-
-    def _append_action(self, action):
-        assert isinstance(action, float), "Observation is not float" 
-        # Roll matrix values one step to the left
-        self.past_actions = np.roll(self.past_actions, 1)
-        # Assign at the last position of the matrix the new action
-        self.past_actions[0] = action
-        return self.past_actions
-    
-    def reset_information_vector(self):
-        self.information_vector = np.zeros(self.number_of_past_observations + self.number_of_past_actions)
-
-    def update_information_vector(self, observation, action):
-        self._append_observation(observation)
-        self._append_action(action)
-        self.information_vector[0 : self.number_of_past_observations] = self.past_observations #np.hstack((self._append_observation(observation), self._append_action(action)))
-        self.information_vector[self.number_of_past_observations : (self.number_of_past_observations + self.number_of_past_actions)] = self.past_actions
-        return self.information_vector
 
 
 class Agent:
@@ -747,11 +677,16 @@ def worker(t, worker_model, counter, params, losses, sensor_health_status_transi
         print(f"Episode: {i} Episode reward: {episode_reward}")
        
 
+def basePolicy(env):
+    action = 0
+    new_observation, reward, is_done, info = env.step(action)
+    return new_observation
+
 if __name__ == "__main__":
     training_sessions = 20 
     training_sessions_start = 1
     training_sessions_stop = training_sessions_start + training_sessions
-    run_dqn_experiment = True 
+    run_dqn_experiment = False 
     run_a3c_experiment = False 
     episode_number = 150 
     episode_duration = 5000
@@ -760,8 +695,8 @@ if __name__ == "__main__":
     # Logging
     PLOT_RESULTS = False #True
     LIVE_PLOTTING = False #True
-    SAVE_MODEL = True
-    SAVE_RESULTS_TO_FILE = True
+    SAVE_MODEL = False
+    SAVE_RESULTS_TO_FILE = False
 
     # Actions
     NO_MAINTENANCE = 0
@@ -801,7 +736,7 @@ if __name__ == "__main__":
 
     # Simulation parameters
     # sensor probability to make a transition from healthy to healthy state
-    s_Phh = 0.999
+    s_Phh = 0.9
     # sensor probability to make a transition from faulty to faulty state
     s_Pff = 0.9
     # sensor probability to generate a status update when healthy
@@ -809,11 +744,11 @@ if __name__ == "__main__":
     # sensor probability to generate a status update when faulty
     s_Pfsug = 0.0 
     # network transition probability from healthy to healthy state
-    n_Phh = 0.999
+    n_Phh = 0.9
     # network transition probability from faulty to faulty state
     n_Pff = 0.9 
     # network status update delivery probability when in healthy state
-    n_Phsud = 0.99
+    n_Phsud = 1.0
     # network status update delivery when in faulty stae
     n_Pfsud = 0.0
     sensor_health_status_transition_matrix = np.array([[s_Phh, 1.0 - s_Phh], 
@@ -835,70 +770,184 @@ if __name__ == "__main__":
     is_done = False
     sensor_number = observation_size    
     action_number = 3
+    results_path = './belief/results'
+    trajectory_path = './belief/trajectory'
+    env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, trajectory_path)
     
-    if run_dqn_experiment:
-    	for t in range(training_sessions_start, training_sessions_stop):
-            folder_name = f'dqn_{descriptive_name}_exp_{t}/'
-            #f'dqn_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
-            if not os.path.exists(f'{path_name}{folder_name}'):
-                os.makedirs(f'{path_name}{folder_name}')
-            file_name = 'episodes_total_rewards.txt' 
-            net_file = 'dqn_trained_model.pth'
-            trajectory_file_name = 'modified_epsilon_greedy_trajetory.txt'
 
-            results_path = f'{path_name}{folder_name}{file_name}'
-            model_path = f'{path_name}{folder_name}{net_file}'
-            trajectory_path = f'{path_name}{trajectory_file_name}'
-            env = System(sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, trajectory_path)
-            agent = Agent(env, observation_size, hidden_size, action_number) #, number_of_past_observations, number_of_past_actions
-            trained_net = agent.train(epsilon_start, epsilon_final, epsilon_decay_last_stage, learning_duration, replay_start_size, batch_size, sync_target_network, model_path, path)
-            # agent.play_episode(env, './dqn_trained_model.pth')
-	        #agent.play_episode(env, net_file)
-	        # agent.print_policy(env, net_file)
-	        #files.download(file_name) 
-    if run_a3c_experiment:
-        for t in range(training_sessions_start, training_sessions_stop):
-            folder_name = f'a3c_{descriptive_name}_exp_{t}/'
-            #f'a3c_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
-            if not os.path.exists(f'{path_name}{folder_name}'):
-                os.makedirs(f'{path_name}{folder_name}')
-            file_name = 'episodes_total_rewards.txt'
-            model_file_name = f'a3c_trained_model.pth'
-            trajectory_file_name = 'modified_epsilon_greedy_trajetory.txt'
-            results_path = f'{path_name}{folder_name}{file_name}'
-            model_path = f'{path_name}{folder_name}{model_file_name}'
-            trajectory_path = f'{path_name}{trajectory_file_name}'
-            if path.exists(model_path):
-                print("Loading existing model")
-                MasterNode = torch.load(model_path)
-                MasterNode.eval()
-            else:
-                print("Creating a new a3c model")
-            MasterNode = ActorCritic(observation_size)
-            # def worker(t, worker_model, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name)
-            # MasterNode.share_memory()
-            processes = []
-            params = {
-	            'epochs': episode_number,
-	            'n_workers':1,
-	        }
-            i = 0 
-            counter = 0
-            losses = 0
-            worker(t, MasterNode, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, model_path, trajectory_path)
-            # counter = mp.Value('i',0)
-            # losses = mp.Queue()
-            # for i in range(params['n_workers']):
-            #     p = mp.Process(target=worker, args=(i,MasterNode,counter,params,losses,sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name))
-            #     p.start()
-            #     processes.append(p)
-            # for p in processes:
-            #     p.join()
-            # for p in processes:
-            #     p.terminate()
+    data_sequence_length = 10000
+    data = np.zeros((data_sequence_length, observation_size*2+1))
+    
+    action = 0
+  
+    for i in range(data_sequence_length):
+        new_observation, reward, is_done, info = env.step(action)
+        data[i,0:observation_size] = new_observation
+        data[i,observation_size:2*observation_size+1] = np.array(info)
+    
+    
+    fig = plt.figure()
+    starting_stage = 1
+    final_stage = 10000
+    x = range(starting_stage,final_stage)
+    y = data[starting_stage:final_stage, 0]
+    h = data[starting_stage:final_stage, observation_size]
+    n = data[starting_stage:final_stage, 2*observation_size]
+    #plt.plot(dqn_total_reward_per_episode, label='DQN')
+    plt.step(x, y, label='AoI sensor 0')
+    plt.step(x, h, label='Hidden State')
+    plt.step(x, n, label='Network hidden state')
+    # plt.plot(data[:,1], label='Sensor 1')
+    # plt.plot(data[:,0], label='Sensor 2')
+    # plt.plot(data[:,1], label='Sensor 3')
+    plt.xlabel('Stage') 
+    plt.ylabel('AoI') #plt.title(')
+    plt.legend()
+    plt.savefig('AoI.pdf')   
+    np.savetxt('./belief/results/data.txt',data, fmt='%.1f')
+    
 
-            torch.save(MasterNode, model_path)
+
+
+    
+    # if run_dqn_experiment:
+    # 	for t in range(training_sessions_start, training_sessions_stop):
+    #         folder_name = f'dqn_{descriptive_name}_exp_{t}/'
+    #         #f'dqn_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
+    #         if not os.path.exists(f'{path_name}{folder_name}'):
+    #             os.makedirs(f'{path_name}{folder_name}')
+    #         file_name = 'episodes_total_rewards.txt' 
+    #         net_file = 'dqn_trained_model.pth'
+    #         trajectory_file_name = 'modified_epsilon_greedy_trajetory.txt'
+
+    #         results_path = f'{path_name}{folder_name}{file_name}'
+    #         model_path = f'{path_name}{folder_name}{net_file}'
+    #         trajectory_path = f'{path_name}{trajectory_file_name}'
+    #         agent = Agent(env, observation_size, hidden_size, action_number) #, number_of_past_observations, number_of_past_actions
+    #         trained_net = agent.train(epsilon_start, epsilon_final, epsilon_decay_last_stage, learning_duration, replay_start_size, batch_size, sync_target_network, model_path, path)
+    #         # agent.play_episode(env, './dqn_trained_model.pth')
+	#         #agent.play_episode(env, net_file)
+	#         # agent.print_policy(env, net_file)
+	#         #files.download(file_name) 
+    # if run_a3c_experiment:
+    #     for t in range(training_sessions_start, training_sessions_stop):
+    #         folder_name = f'a3c_{descriptive_name}_exp_{t}/'
+    #         #f'a3c_{descriptive_name}_sess_{t}_ed_{episode_duration}_sn_{observation_size}_mc_{MAINTENANCE_COST}_s_Phh_{s_Phh}_s_Pff_{s_Pff}_s_Phsug_{s_Phsug}_s_Pfsug_{n_Phh}_n_Phh_{n_Phsud}_n_Phsud_{n_Pfsud}/'
+    #         if not os.path.exists(f'{path_name}{folder_name}'):
+    #             os.makedirs(f'{path_name}{folder_name}')
+    #         file_name = 'episodes_total_rewards.txt'
+    #         model_file_name = f'a3c_trained_model.pth'
+    #         trajectory_file_name = 'modified_epsilon_greedy_trajetory.txt'
+    #         results_path = f'{path_name}{folder_name}{file_name}'
+    #         model_path = f'{path_name}{folder_name}{model_file_name}'
+    #         trajectory_path = f'{path_name}{trajectory_file_name}'
+    #         if path.exists(model_path):
+    #             print("Loading existing model")
+    #             MasterNode = torch.load(model_path)
+    #             MasterNode.eval()
+    #         else:
+    #             print("Creating a new a3c model")
+    #         MasterNode = ActorCritic(observation_size)
+    #         # def worker(t, worker_model, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name)
+    #         # MasterNode.share_memory()
+    #         processes = []
+    #         params = {
+	#             'epochs': episode_number,
+	#             'n_workers':1,
+	#         }
+    #         i = 0 
+    #         counter = 0
+    #         losses = 0
+    #         worker(t, MasterNode, counter, params, losses, sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, results_path, model_path, trajectory_path)
+    #         # counter = mp.Value('i',0)
+    #         # losses = mp.Queue()
+    #         # for i in range(params['n_workers']):
+    #         #     p = mp.Process(target=worker, args=(i,MasterNode,counter,params,losses,sensor_health_status_transition_matrix, network_health_status_transition_matrix, p_status_update_generation, p_status_update_delivery, episode_duration, sensor_number, action_number, file_name))
+    #         #     p.start()
+    #         #     processes.append(p)
+    #         # for p in processes:
+    #         #     p.join()
+    #         # for p in processes:
+    #         #     p.terminate()
+
+    #         torch.save(MasterNode, model_path)
 	        # https://pytorch.org/tutorials/beginner/saving_loading_models.html
             # print(counter.value,processes[0].exitcode)
             #files.download(model_file_name)
 	        #files.download(file_name)
+
+
+
+
+
+# class ExperienceBuffer:
+#     def __init__(self, capacity):
+#         self.buffer = collections.deque(maxlen=capacity)
+
+#     def print_experience_buffer(self, indices):
+#         print(f"The length of the buffer is: {len(self.buffer)}")
+#         for idx in indices:
+#            print(f"Buffer: {self.buffer[idx]}")
+
+#     def __len__(self):
+#         return len(self.buffer)
+
+#     def append(self, experience):
+#         #print(f"ExperienceBuffer before appending: {experience}")
+#         self.buffer.append(experience)
+#         #self.print_experience_buffer()
+
+#     def pop(self):
+#         return self.buffer.pop()
+
+#     def sample(self, batch_size):
+#         indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+#         # print(f"Buffer: {self.buffer[indices[0]]}")
+#         states, actions, rewards, dones, next_states = zip(*[self.buffer[idx] for idx in indices])
+#         # print(f"States: {states[0]}, Actions: {actions[0]}, Dones: {dones[0]}, Next States: {next_states[0]}")
+#         # self.print_experience_buffer(indices)
+#         return np.array(states), np.array(actions), np.array(rewards, dtype=np.float32), np.array(dones, dtype=np.uint8), np.array(next_states)
+
+    
+#         # for exp in len(self.buffer):
+#         #    #print(f"Buffer: {exp}")
+#         #    print(self.buffer.pop())
+
+
+# class InformationVector:
+#     def __init__(self, number_of_past_observations, number_of_past_actions):
+#         self.number_of_past_observations = number_of_past_observations
+#         self.number_of_past_actions = number_of_past_actions
+#         self.past_observations = np.zeros(number_of_past_observations)
+#         self.past_actions = np.zeros(number_of_past_actions)
+#         self.information_vector = np.zeros(number_of_past_observations + number_of_past_actions)
+
+#     def reset(self):
+#         self.information_vector = np.zeros(self.number_of_past_observations + self.number_of_past_actions)
+
+#     def _append_observation(self, observation):
+#         assert isinstance(observation, float), "Observation is not float" 
+#         # Roll matrix values one step to the left
+#         self.past_observations = np.roll(self.past_observations, 1)
+#         # Assign at the last position of the matrix the new observation
+#         self.past_observations[0] = observation
+#         return self.past_observations
+
+#     def _append_action(self, action):
+#         assert isinstance(action, float), "Observation is not float" 
+#         # Roll matrix values one step to the left
+#         self.past_actions = np.roll(self.past_actions, 1)
+#         # Assign at the last position of the matrix the new action
+#         self.past_actions[0] = action
+#         return self.past_actions
+    
+#     def reset_information_vector(self):
+#         self.information_vector = np.zeros(self.number_of_past_observations + self.number_of_past_actions)
+
+#     def update_information_vector(self, observation, action):
+#         self._append_observation(observation)
+#         self._append_action(action)
+#         self.information_vector[0 : self.number_of_past_observations] = self.past_observations #np.hstack((self._append_observation(observation), self._append_action(action)))
+#         self.information_vector[self.number_of_past_observations : (self.number_of_past_observations + self.number_of_past_actions)] = self.past_actions
+#         return self.information_vector
+
